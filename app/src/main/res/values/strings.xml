@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Ava Negar</string>
+    <string name="stop_file">Stop File</string>
+    <string name="recognize_file">Recognize File</string>
+    <string name="stop_microphone">Stop Microphone</string>
+    <string name="recognize_microphone">Recognize Microphone</string>
+    <string name="save_as_text_file">Save As Text</string>
+    <string name="save_as_srt_file">Save As Srt</string>
+</resources>
