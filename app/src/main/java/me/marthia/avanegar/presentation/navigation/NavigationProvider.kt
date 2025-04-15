@@ -10,4 +10,6 @@ interface NavigationProvider {
     val destNav: DestinationsNavigator
 
     fun navigateUp()
+
+    fun openTranscriptionResult()
 }

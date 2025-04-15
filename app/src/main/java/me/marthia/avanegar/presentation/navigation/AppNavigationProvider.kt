@@ -1,6 +1,7 @@
 package me.marthia.avanegar.presentation.navigation
 
 import androidx.navigation.NavHostController
+import com.ramcosta.composedestinations.generated.destinations.TranscriptionRouteDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 
 class AppNavigationProvider(
@@ -18,6 +19,10 @@ class AppNavigationProvider(
         navController.navigateUp()
     }
 
+
+    override fun openTranscriptionResult() {
+        destinationsNavigator.navigate(TranscriptionRouteDestination())
+    }
 
 }
 

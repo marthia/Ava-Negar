@@ -1,5 +1,10 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package me.marthia.avanegar.presentation.home
 
+import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,15 +23,18 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,31 +45,41 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
+import kotlinx.coroutines.launch
 import me.marthia.avanegar.R
+import me.marthia.avanegar.presentation.common.ModelSelectionBS
+import me.marthia.avanegar.presentation.common.Models
+import me.marthia.avanegar.presentation.common.VoskActivity
 import me.marthia.avanegar.presentation.common.VoskViewModel
 import me.marthia.avanegar.presentation.navigation.HomeGraph
+import me.marthia.avanegar.presentation.navigation.NavigationProvider
 import me.marthia.avanegar.presentation.theme.AvaNegarTheme
 
 @Destination<HomeGraph>(start = true)
 @Composable
 fun VoskApp(
-    modifier: Modifier = Modifier,
-    viewModel: VoskViewModel = hiltViewModel()
+    navigator: NavigationProvider,
+    viewModel: VoskViewModel = hiltViewModel(LocalActivity.current as VoskActivity)
 ) {
-    val state = viewModel.transcription
+    val mediaPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            uri?.let {
+                viewModel.toggleFileRecognition(uri.toString())
+                navigator.openTranscriptionResult()
+            }
+        }
+    )
+
 
     Scaffold { p ->
         VoskScreen(
-            modifier = modifier.padding(p),
-            uiState = state,
+            modifier = Modifier.padding(p),
             onRecognizeFileClick = {
-                viewModel.toggleFileRecognition()
+                mediaPicker.launch("audio/wav")
             },
-            onRecognizeMicClick = {
-                viewModel.toggleMicrophoneRecognition()
-            },
-            onPauseClick = { isPaused ->
-                viewModel.setPause(isPaused)
+            onModelSelected = { model ->
+                viewModel.initModel(model)
             }
         )
     }
@@ -70,12 +88,9 @@ fun VoskApp(
 @Composable
 fun VoskScreen(
     modifier: Modifier = Modifier,
-    uiState: String,
     onRecognizeFileClick: () -> Unit,
-    onRecognizeMicClick: () -> Unit,
-    onPauseClick: (Boolean) -> Unit
+    onModelSelected: (Models) -> Unit,
 ) {
-    val context = LocalContext.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -122,6 +137,28 @@ fun VoskScreen(
         }
 
         PreviousTranscriptions()
+
+        CurrentModel(modifier = Modifier.align(Alignment.CenterHorizontally), onModelSelected = onModelSelected)
+    }
+}
+
+
+@Composable
+fun CurrentModel(modifier: Modifier = Modifier, onModelSelected: (Models) -> Unit) {
+    val state = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    ModelSelectionBS(
+        bottomSheetState = state,
+        defaultModel = "",
+        onSelection = onModelSelected
+    )
+    Row(modifier = modifier) {
+        Text("no model selected")
+        IconButton(onClick = {
+            scope.launch { state.show() }
+        }) {
+            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Arrow")
+        }
     }
 }
 
@@ -184,7 +221,6 @@ fun TranscriptionItemList(modifier: Modifier = Modifier) {
 }
 
 
-
 @Composable
 fun MoreOptions(
     modifier: Modifier = Modifier,
@@ -209,10 +245,6 @@ fun MoreOptions(
         )
     }
 }
-
-
-
-
 
 
 @Preview(showBackground = true, showSystemUi = true)

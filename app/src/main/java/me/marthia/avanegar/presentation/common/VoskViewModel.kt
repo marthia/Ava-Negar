@@ -20,24 +20,9 @@ class VoskViewModel @Inject constructor(
     var recognitionState by mutableStateOf(RecognitionState.Starting)
         private set
 
-
-    var fileButtonEnabled by mutableStateOf(false)
-        private set
-
-
-    var micButtonEnabled by mutableStateOf(false)
-        private set
-
-
-    var pauseEnabled by mutableStateOf(false)
-        private set
-
-
-    var isPaused by mutableStateOf(false)
-        private set
-
     var transcription by mutableStateOf("")
         private set
+
 
     var errorMsg by mutableStateOf("")
         private set
@@ -47,7 +32,7 @@ class VoskViewModel @Inject constructor(
 
         onModelReady {
             Log.i("RecognitionState", "onModelReady")
-            onReadyUi()
+//            onReadyUi()
         }
 
         onResult { hypothesis ->
@@ -58,7 +43,7 @@ class VoskViewModel @Inject constructor(
         onFinalResult { hypothesis ->
             Log.i("RecognitionState", "onFinalResult")
             appendResult(hypothesis)
-            onDoneUi()
+//            onDoneUi()
         }
 
         onPartialResult { hypothesis ->
@@ -71,88 +56,9 @@ class VoskViewModel @Inject constructor(
         }
 
         onTimeout {
-            onDoneUi()
+//            onDoneUi()
         }
     }
-
-    private fun onReadyUi() {
-        recognitionState = RecognitionState.Ready
-        pauseEnabled = false
-        isPaused = false
-    }
-
-    private fun onDoneUi() {
-        recognitionState = RecognitionState.Done
-        fileButtonEnabled = true
-        micButtonEnabled = true
-    }
-
-    private fun onFileUi() {
-        recognitionState = RecognitionState.File
-        fileButtonEnabled = true
-    }
-
-    private fun onMicrophoneUi() {
-        recognitionState = RecognitionState.Microphone
-        micButtonEnabled = true
-        pauseEnabled = true
-    }
-
-
-    /*fun updateState(state: RecognitionState) {
-        _uiState.update { currentState ->
-            Log.i("RecognitionState", "Current State--> $currentState")
-            when (state) {
-                RecognitionState.Starting -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = false,
-                    micButtonEnabled = false,
-                    pauseEnabled = false,
-                    isPaused = false
-                )
-
-                RecognitionState.Ready -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = true,
-                    micButtonEnabled = true,
-                    pauseEnabled = false,
-                    isPaused = false
-                )
-
-                RecognitionState.File -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = true,
-                    micButtonEnabled = false,
-                    pauseEnabled = false,
-                    isPaused = false
-                )
-
-                RecognitionState.Microphone -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = false,
-                    micButtonEnabled = true,
-                    pauseEnabled = true,
-                    isPaused = false
-                )
-
-                RecognitionState.Done -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = true,
-                    micButtonEnabled = true,
-                    pauseEnabled = false,
-                    isPaused = false
-                )
-
-                RecognitionState.Error -> currentState.copy(
-                    recognitionState = state,
-                    fileButtonEnabled = false,
-                    micButtonEnabled = false,
-                    pauseEnabled = false,
-                    isPaused = false
-                )
-            }
-        }
-    }*/
 
     private fun appendResult(text: String) {
         Log.i("RecognitionState", "appendResult--> $text")
@@ -176,29 +82,10 @@ class VoskViewModel @Inject constructor(
 
         recognitionState = RecognitionState.Error
         errorMsg = errorMessage
-        fileButtonEnabled = false
-        micButtonEnabled = false
-        pauseEnabled = false
     }
 
-    fun toggleFileRecognition() {
-        if (speechManager.isFileRecognitionActive()) {
-            speechManager.stopFileRecognition()
-            onDoneUi()
-        } else {
-            onFileUi()
-            speechManager.startFileRecognition()
-        }
-    }
-
-    fun toggleMicrophoneRecognition() {
-        if (speechManager.isMicrophoneRecognitionActive()) {
-            speechManager.stopMicrophoneRecognition()
-            onDoneUi()
-        } else {
-            onMicrophoneUi()
-            speechManager.startMicrophoneRecognition()
-        }
+    fun toggleFileRecognition(audio: String) {
+        speechManager.startFileRecognition(audio)
     }
 
     fun setPause(isPaused: Boolean) {
@@ -208,5 +95,9 @@ class VoskViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         speechManager.shutdown()
+    }
+
+    fun initModel(model: Models) {
+        speechManager.initModel(model)
     }
 }
