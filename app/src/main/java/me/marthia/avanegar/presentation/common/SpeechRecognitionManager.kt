@@ -2,6 +2,15 @@ package me.marthia.avanegar.presentation.common
 
 import android.content.Context
 import androidx.core.net.toUri
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import me.marthia.avanegar.domain.RecognitionEvent
 import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model
@@ -9,84 +18,73 @@ import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener
 import org.vosk.android.SpeechService
 import org.vosk.android.SpeechStreamService
-import org.vosk.android.StorageService
 import java.io.IOException
 
-class SpeechRecognitionManager(private val context: Context) : RecognitionListener {
-
-    // 🎯 Define callback properties for each listener method
-    private var onModelReady: () -> Unit = {}
-    private var onResult: (hypothesis: String) -> Unit = { _ -> }
-    private var onFinalResult: (hypothesis: String) -> Unit = { _ -> }
-    private var onPartialResult: (hypothesis: String) -> Unit = { _ -> }
-    private var onError: (errorMessage: String) -> Unit = { _ -> }
-    private var onTimeout: () -> Unit = {}
+class SpeechRecognitionManager(
+    private val context: Context,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+) : RecognitionListener {
 
     private var model: Model? = null
     private var speechService: SpeechService? = null
     private var speechStreamService: SpeechStreamService? = null
+
+    private val managerScope = CoroutineScope(defaultDispatcher + SupervisorJob())
+
+    private val _recognitionEventFlow =
+        MutableSharedFlow<RecognitionEvent>(extraBufferCapacity = 64)
+    val recognitionEventFlow = _recognitionEventFlow.asSharedFlow()
 
     // Initialize with default callbacks (silent/empty)
     init {
         LibVosk.setLogLevel(LogLevel.INFO)
     }
 
-    // 🔥 New methods to set callbacks (replaces `setListener`)
-    fun onModelReady(callback: () -> Unit) {
-        onModelReady = callback
-    }
-
-    fun onResult(callback: (String) -> Unit) {
-        onResult = callback
-    }
-
-    fun onFinalResult(callback: (String) -> Unit) {
-        onFinalResult = callback
-    }
-
-    fun onPartialResult(callback: (String) -> Unit) {
-        onPartialResult = callback
-    }
-
-    fun onError(callback: (String) -> Unit) {
-        onError = callback
-    }
-
-    fun onTimeout(callback: () -> Unit) {
-        onTimeout = callback
-    }
-
     // Update RecognitionListener overrides to call lambdas
     override fun onResult(hypothesis: String) {
-        onResult(hypothesis)
+        managerScope.launch {
+            _recognitionEventFlow.emit(RecognitionEvent.Result(hypothesis))
+        }
     }
 
     override fun onFinalResult(hypothesis: String) {
         speechStreamService = null
-        onFinalResult(hypothesis)
+        managerScope.launch {
+            _recognitionEventFlow.emit(RecognitionEvent.FinalResult(hypothesis))
+        }
     }
 
     override fun onPartialResult(hypothesis: String) {
-        onPartialResult(hypothesis)
+        managerScope.launch {
+            _recognitionEventFlow.emit(RecognitionEvent.PartialResult(hypothesis))
+        }
     }
 
     override fun onError(e: Exception) {
-        onError(e.message ?: "Unknown error")
+        managerScope.launch {
+            _recognitionEventFlow.emit(RecognitionEvent.Error(e.message ?: "Unknown error"))
+        }
     }
 
     override fun onTimeout() {
-        onTimeout()
+        managerScope.launch {
+            _recognitionEventFlow.emit(RecognitionEvent.Timeout)
+        }
     }
 
     fun initModel(speechModel: Models) {
 
         kotlin.runCatching {
-            val model = Model(speechModel.path)
+            val model = Model("${context.getExternalFilesDir(null)}/model/${speechModel.title}")
             this.model = model
         }.onSuccess {
-            onModelReady()
+            managerScope.launch {
+                _recognitionEventFlow.emit(RecognitionEvent.ModelReady(model!!))
+            }
         }.onFailure { exception ->
-            onError("Failed to unpack the model: ${exception.message}")
+            managerScope.launch {
+                _recognitionEventFlow.emit(RecognitionEvent.Error("Failed to unpack the model: ${exception.message}"))
+            }
         }
     }
 
@@ -94,7 +92,9 @@ class SpeechRecognitionManager(private val context: Context) : RecognitionListen
 
     fun startFileRecognition(audioPath: String) {
         val currentModel = model ?: run {
-            onError("Model not initialized")
+            managerScope.launch {
+                _recognitionEventFlow.emit(RecognitionEvent.Error("Model not initialized"))
+            }
             return
         }
 
@@ -107,7 +107,13 @@ class SpeechRecognitionManager(private val context: Context) : RecognitionListen
             speechStreamService = SpeechStreamService(rec, ais, 44100f)
             speechStreamService?.start(this)
         } catch (e: IOException) {
-            onError(e.message ?: "Unknown error during file recognition")
+            managerScope.launch {
+                _recognitionEventFlow.emit(
+                    RecognitionEvent.Error(
+                        e.message ?: "Unknown error during file recognition"
+                    )
+                )
+            }
         }
     }
 
@@ -127,7 +133,9 @@ class SpeechRecognitionManager(private val context: Context) : RecognitionListen
         }
         speechService = null
 
+
         speechStreamService?.stop()
         speechStreamService = null
+        managerScope.cancel()
     }
 }

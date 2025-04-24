@@ -80,6 +80,14 @@ dependencies {
     implementation(libs.androidx.work.runtime)
 
 
+     implementation(libs.kotlinx.coroutines.android)
+
+    //    Network
+    implementation(libs.retrofit)
+    implementation(libs.logging.interceptor)
+    implementation(libs.okhttp)
+    implementation(libs.moshi.kotlin)
+
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

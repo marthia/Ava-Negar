@@ -76,7 +76,7 @@ fun VoskApp(
         VoskScreen(
             modifier = Modifier.padding(p),
             onRecognizeFileClick = {
-                mediaPicker.launch("audio/wav")
+                mediaPicker.launch("audio/*")
             },
             onModelSelected = { model ->
                 viewModel.initModel(model)
@@ -137,6 +137,8 @@ fun VoskScreen(
         }
 
         PreviousTranscriptions()
+
+        Spacer(Modifier.weight(1f))
 
         CurrentModel(modifier = Modifier.align(Alignment.CenterHorizontally), onModelSelected = onModelSelected)
     }
