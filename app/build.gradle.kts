@@ -80,13 +80,17 @@ dependencies {
     implementation(libs.androidx.work.runtime)
 
 
-     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.android)
 
     //    Network
     implementation(libs.retrofit)
     implementation(libs.logging.interceptor)
     implementation(libs.okhttp)
     implementation(libs.moshi.kotlin)
+
+
+    // Preferences DataStore (SharedPreferences like APIs)
+    implementation(libs.datastore.preferences)
 
 
     androidTestImplementation(libs.androidx.junit)

@@ -21,24 +21,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,8 +42,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import kotlinx.coroutines.launch
 import me.marthia.avanegar.R
+import me.marthia.avanegar.presentation.common.LanguageModel
 import me.marthia.avanegar.presentation.common.ModelSelectionBS
-import me.marthia.avanegar.presentation.common.Models
+import me.marthia.avanegar.presentation.common.Pref
 import me.marthia.avanegar.presentation.common.VoskActivity
 import me.marthia.avanegar.presentation.common.VoskViewModel
 import me.marthia.avanegar.presentation.navigation.HomeGraph
@@ -71,6 +67,8 @@ fun VoskApp(
         }
     )
 
+    val currentSelectedModel = Pref.currentModel
+
 
     Scaffold { p ->
         VoskScreen(
@@ -78,23 +76,29 @@ fun VoskApp(
             onRecognizeFileClick = {
                 mediaPicker.launch("audio/*")
             },
+            selectedModel = currentSelectedModel,
             onModelSelected = { model ->
                 viewModel.initModel(model)
             }
         )
+    }
+
+    SideEffect {
+        viewModel.initModel(currentSelectedModel)
     }
 }
 
 @Composable
 fun VoskScreen(
     modifier: Modifier = Modifier,
+    selectedModel: LanguageModel?,
     onRecognizeFileClick: () -> Unit,
-    onModelSelected: (Models) -> Unit,
+    onModelSelected: (LanguageModel) -> Unit,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -136,26 +140,36 @@ fun VoskScreen(
 
         }
 
+        Spacer(Modifier.height(48.dp))
+
         PreviousTranscriptions()
 
         Spacer(Modifier.weight(1f))
 
-        CurrentModel(modifier = Modifier.align(Alignment.CenterHorizontally), onModelSelected = onModelSelected)
+        CurrentModel(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            selectedModel = selectedModel,
+            onModelSelected = onModelSelected
+        )
     }
 }
 
 
 @Composable
-fun CurrentModel(modifier: Modifier = Modifier, onModelSelected: (Models) -> Unit) {
+fun CurrentModel(
+    modifier: Modifier = Modifier,
+    selectedModel: LanguageModel? = null,
+    onModelSelected: (LanguageModel) -> Unit
+) {
     val state = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     ModelSelectionBS(
         bottomSheetState = state,
-        defaultModel = "",
+        defaultModel = LanguageModel.FA,
         onSelection = onModelSelected
     )
-    Row(modifier = modifier) {
-        Text("no model selected")
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(selectedModel?.title ?: "no model selected")
         IconButton(onClick = {
             scope.launch { state.show() }
         }) {
@@ -172,11 +186,13 @@ fun PreviousTranscriptions(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(start = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Latest Text Files")
+            Text(stringResource(R.string.latest_text_files))
             Icon(imageVector = Icons.Default.ArrowDropDown, "Arrow Drop Down")
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(16.dp))
+
+
         repeat(3) {
 
             TranscriptionItemList(
@@ -202,7 +218,11 @@ fun TranscriptionItemList(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            Icon(painter = painterResource(R.drawable.article_icon), contentDescription = "icon")
+            Icon(
+                painter = painterResource(R.drawable.outline_article_24),
+                tint = MaterialTheme.colorScheme.primary,
+                contentDescription = "icon"
+            )
 
             Column {
                 Text("Transcription_01", style = MaterialTheme.typography.titleMedium)
@@ -210,7 +230,11 @@ fun TranscriptionItemList(modifier: Modifier = Modifier) {
                     "Lorem Ipsum Lorem Ipsum Lorem Ipsum",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Text("23 Sep 2024", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    "23 Sep 2024", style = MaterialTheme.typography.labelSmall.copy(
+                        LocalContentColor.current.copy(alpha = 0.6f)
+                    )
+                )
             }
 
             Spacer(Modifier.weight(1f))
@@ -219,32 +243,6 @@ fun TranscriptionItemList(modifier: Modifier = Modifier) {
             }
 
         }
-    }
-}
-
-
-@Composable
-fun MoreOptions(
-    modifier: Modifier = Modifier,
-    defaultState: Boolean,
-    onSaveTxt: () -> Unit,
-    onSaveSrt: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(defaultState) }
-
-    DropdownMenu(
-        modifier = modifier,
-        expanded = expanded,
-        onDismissRequest = { expanded = false }
-    ) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.save_as_text_file)) },
-            onClick = onSaveTxt
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.save_as_srt_file)) },
-            onClick = onSaveSrt
-        )
     }
 }
 

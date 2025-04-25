@@ -1,6 +1,7 @@
 package me.marthia.avanegar.presentation.common
 
 import android.content.Context
+import android.util.Log
 import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,7 @@ class SpeechRecognitionManager(
     private var model: Model? = null
     private var speechService: SpeechService? = null
     private var speechStreamService: SpeechStreamService? = null
+    private var currentLanguageModel: LanguageModel? = null
 
     private val managerScope = CoroutineScope(defaultDispatcher + SupervisorJob())
 
@@ -72,7 +74,12 @@ class SpeechRecognitionManager(
         }
     }
 
-    fun initModel(speechModel: Models) {
+    fun initModel(speechModel: LanguageModel) {
+
+//        if (this.model != null || currentLanguageModel != speechModel) {
+//            Log.d("SpeechManager", "Model Already Active")
+//            return
+//        }
 
         kotlin.runCatching {
             val model = Model("${context.getExternalFilesDir(null)}/model/${speechModel.title}")

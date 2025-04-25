@@ -9,8 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.marthia.avanegar.domain.RecognitionEvent
 import me.marthia.avanegar.domain.RecognitionState
@@ -109,7 +107,7 @@ class VoskViewModel @Inject constructor(
         speechManager.shutdown()
     }
 
-    fun initModel(model: Models) {
+    fun initModel(model: LanguageModel) {
         speechManager.initModel(model)
     }
 }
