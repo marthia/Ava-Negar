@@ -1,8 +1,6 @@
 package me.marthia.avanegar.presentation.common
 
 import android.content.Context
-import android.util.Log
-import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +17,8 @@ import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener
 import org.vosk.android.SpeechService
 import org.vosk.android.SpeechStreamService
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 
 class SpeechRecognitionManager(
@@ -106,12 +106,14 @@ class SpeechRecognitionManager(
         }
 
         try {
-            val rec = Recognizer(currentModel, 44100f)
+            val rec = Recognizer(currentModel, 16000f)
 
-            val ais = context.contentResolver.openInputStream(audioPath.toUri())
+//            val ais = context.contentResolver.openInputStream(audioPath.toUri())
+            val audiFile = File(audioPath)
+            val ais = FileInputStream(audiFile)
             if (ais?.skip(44) != 44L) throw IOException("File too short")
 
-            speechStreamService = SpeechStreamService(rec, ais, 44100f)
+            speechStreamService = SpeechStreamService(rec, ais, 16000f)
             speechStreamService?.start(this)
         } catch (e: IOException) {
             managerScope.launch {

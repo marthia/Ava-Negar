@@ -92,6 +92,8 @@ dependencies {
     // Preferences DataStore (SharedPreferences like APIs)
     implementation(libs.datastore.preferences)
 
+    implementation(libs.accompanist.permissions)
+
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

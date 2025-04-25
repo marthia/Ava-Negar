@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,11 +14,12 @@ import kotlinx.coroutines.launch
 import me.marthia.avanegar.domain.RecognitionEvent
 import me.marthia.avanegar.domain.RecognitionState
 import me.marthia.avanegar.domain.mapVoskResultToTranscription
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
 class VoskViewModel @Inject constructor(
-    @ApplicationContext context: Context
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     var recognitionState by mutableStateOf(RecognitionState.Starting)
@@ -29,6 +31,8 @@ class VoskViewModel @Inject constructor(
 
     var errorMsg by mutableStateOf("")
         private set
+
+    private val fileUtils = FileUtils(context)
 
 
     private var speechManager: SpeechRecognitionManager = SpeechRecognitionManager(context).apply {
@@ -95,7 +99,15 @@ class VoskViewModel @Inject constructor(
     }
 
     fun toggleFileRecognition(audio: String) {
-        speechManager.startFileRecognition(audio)
+        viewModelScope.launch {
+            val audioPath = fileUtils.getPath(audio.toUri()).toString()
+            val wavFilePath = AudioConverter.getTempWavFilePath(context, audioPath)
+
+            // Convert the audio
+            if (AudioConverter.convertToWav(audioPath, wavFilePath)) {
+                speechManager.startFileRecognition(wavFilePath)
+            }
+        }
     }
 
     fun setPause(isPaused: Boolean) {

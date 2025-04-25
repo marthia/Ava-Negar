@@ -42,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import kotlinx.coroutines.launch
 import me.marthia.avanegar.R
+import me.marthia.avanegar.presentation.common.AudioAndFilePermission
 import me.marthia.avanegar.presentation.common.LanguageModel
 import me.marthia.avanegar.presentation.common.ModelSelectionBS
 import me.marthia.avanegar.presentation.common.Pref
@@ -57,6 +58,7 @@ fun VoskApp(
     navigator: NavigationProvider,
     viewModel: VoskViewModel = hiltViewModel(LocalActivity.current as VoskActivity)
 ) {
+
     val mediaPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
@@ -86,6 +88,8 @@ fun VoskApp(
     SideEffect {
         viewModel.initModel(currentSelectedModel)
     }
+
+    AudioAndFilePermission {  }
 }
 
 @Composable
