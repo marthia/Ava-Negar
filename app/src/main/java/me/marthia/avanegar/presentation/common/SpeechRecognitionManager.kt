@@ -1,6 +1,7 @@
 package me.marthia.avanegar.presentation.common
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class SpeechRecognitionManager(
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : RecognitionListener {
 
+    private val defaultPath = "${context.getExternalFilesDir(null)}/model/"
     private var model: Model? = null
     private var speechService: SpeechService? = null
     private var speechStreamService: SpeechStreamService? = null
@@ -82,7 +84,7 @@ class SpeechRecognitionManager(
 //        }
 
         kotlin.runCatching {
-            val model = Model("${context.getExternalFilesDir(null)}/model/${speechModel.title}")
+            val model = Model("$defaultPath${speechModel.title}")
             this.model = model
         }.onSuccess {
             managerScope.launch {
@@ -146,5 +148,11 @@ class SpeechRecognitionManager(
         speechStreamService?.stop()
         speechStreamService = null
         managerScope.cancel()
+    }
+
+    fun isModelAvailable(name: String): Boolean {
+        val isDirectory = File("$defaultPath$name").exists()
+        Log.i("Manager", if (isDirectory) "file is already downloaded" else "directory not found")
+        return isDirectory
     }
 }

@@ -17,6 +17,7 @@ import me.marthia.avanegar.R
 import me.marthia.avanegar.presentation.utils.AndroidVersionUtils
 import me.marthia.avanegar.presentation.utils.LocaleProvider
 import me.marthia.avanegar.presentation.utils.SDK
+import me.marthia.avanegar.presentation.utils.copyTo
 import java.io.BufferedInputStream
 import java.io.File
 import java.net.HttpURLConnection
@@ -87,7 +88,6 @@ object ForegroundUtils {
 
         val foregroundInfo =
             if (AndroidVersionUtils.atLeast(SDK.Android10))
-//                TODO Android 15 will remove data sync type
                 ForegroundInfo(
                     NOTIFICATION_ID,
                     notification,
@@ -173,9 +173,9 @@ object ForegroundUtils {
                 BufferedInputStream(URL(url).openStream())
             }.use { input ->
                 target.outputStream().use { outputStream ->
-//                    input.copyTo(outputStream, DEFAULT_BUFFER_SIZE) { bytesRead ->
-//                        onProgress(bytesRead)
-//                    }
+                    input.copyTo(outputStream, DEFAULT_BUFFER_SIZE) { bytesRead ->
+                        onProgress(bytesRead)
+                    }
                 }
             }
 

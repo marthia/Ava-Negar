@@ -2,7 +2,7 @@ package me.marthia.avanegar.presentation.common
 
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Environment
+import android.net.Uri
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
@@ -19,6 +19,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.marthia.avanegar.presentation.common.ForegroundUtils.NOTIFICATION_ID
+import me.marthia.avanegar.presentation.utils.fromJson
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -42,10 +43,12 @@ class DownloadModelWorker @AssistedInject constructor(
             subscribeNotif()
 
             withContext(Dispatchers.IO) {
-                val url = inputData.getString(DATA_INFO_KEY)!!
+                val url = inputData.getString(DATA_INFO_KEY)!!.fromJson<String>()!!
+                val fileName = Uri.parse(url).lastPathSegment ?: ""
+                val target = File("${context.getExternalFilesDir(null)}/model/$fileName")
 
                 ForegroundUtils.downloadFile(
-                    target = context.cacheDir,
+                    target = target,
                     url = url,
                     onProgress = { bytesDownloaded ->
                         setProgressAsync(
@@ -56,13 +59,9 @@ class DownloadModelWorker @AssistedInject constructor(
                         )
                     },
                     onComplete = {
-                        // Move the downloaded file to the gallery
-                        val galleryDirectory = Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_PICTURES
-                        )
-
-//                            val destination = File(galleryDirectory, fileName)
-
+                        // todo get this from unified provider
+                        target.unzip("${context.getExternalFilesDir(null)}/model")
+//                        target.delete()
                     }
                 )
             }
@@ -108,11 +107,7 @@ class DownloadModelWorker @AssistedInject constructor(
                 )
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                "${UUID.randomUUID()}",
-                ExistingWorkPolicy.KEEP,
-                uploadWorkRequest
-            )
+            WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 
             return uploadWorkRequest.id
         }

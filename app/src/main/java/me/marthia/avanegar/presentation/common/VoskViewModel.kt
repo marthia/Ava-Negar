@@ -8,19 +8,25 @@ import androidx.compose.runtime.setValue
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import me.marthia.avanegar.domain.RecognitionEvent
 import me.marthia.avanegar.domain.RecognitionState
 import me.marthia.avanegar.domain.mapVoskResultToTranscription
-import java.io.File
+import me.marthia.avanegar.presentation.common.DownloadModelWorker.Companion.DATA_INFO_KEY
+import me.marthia.avanegar.presentation.utils.toJson
 import javax.inject.Inject
 
 @HiltViewModel
 class VoskViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val workManager: WorkManager = WorkManager.getInstance(context)
 
     var recognitionState by mutableStateOf(RecognitionState.Starting)
         private set
@@ -30,6 +36,9 @@ class VoskViewModel @Inject constructor(
 
 
     var errorMsg by mutableStateOf("")
+        private set
+
+    var downloadState by mutableStateOf(false)
         private set
 
     private val fileUtils = FileUtils(context)
@@ -120,6 +129,35 @@ class VoskViewModel @Inject constructor(
     }
 
     fun initModel(model: LanguageModel) {
-        speechManager.initModel(model)
+        // check if model is already downloaded
+        val isPresent = speechManager.isModelAvailable(model.name)
+
+        // download model
+        if (!isPresent)
+            onDownload(model.path) {
+                speechManager.initModel(model)
+            }
+        else {
+            // init model
+            speechManager.initModel(model)
+        }
+    }
+
+    private fun onDownload(media: String, predicate: () -> Unit) {
+        downloadState = true
+        viewModelScope.launch {
+            val data = workDataOf(DATA_INFO_KEY to media.toJson())
+
+            val id = DownloadModelWorker.enqueue(context, data)
+
+            workManager.getWorkInfoByIdFlow(id).collect { info ->
+                viewModelScope.launch {
+                    if (info?.state == WorkInfo.State.SUCCEEDED) {
+                        downloadState = false
+                        predicate()
+                    }
+                }
+            }
+        }
     }
 }
