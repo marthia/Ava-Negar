@@ -4,6 +4,8 @@ import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -13,50 +15,56 @@ import java.nio.ByteOrder
 class AudioConverter {
     companion object {
         private const val TAG = "AudioConverter"
-        
+
         /**
          * Converts an audio file (MP3, AAC, etc.) to a WAV file suitable for vosk
-         * @param inputPath Path to input audio file
+         * @param inputPath Uri to input audio file
          * @param outputPath Path where the WAV file should be saved
          * @return true if conversion successful, false otherwise
          */
-        fun convertToWav(inputPath: String, outputPath: String): Boolean {
+        fun convertToWav(context: Context, inputPath: Uri, outputPath: String): Boolean {
+            val extractor = MediaExtractor()
+            extractor.setDataSource(context, inputPath, null)
+
+            return convert(extractor, outputPath)
+        }
+
+
+        private fun convert(extractor: MediaExtractor, outputPath: String): Boolean {
             try {
-                val extractor = MediaExtractor()
-                extractor.setDataSource(inputPath)
-                
+
                 // Find the first audio track
                 val audioTrackIndex = selectAudioTrack(extractor)
                 if (audioTrackIndex < 0) {
                     Log.e(TAG, "No audio track found in the file")
                     return false
                 }
-                
+
                 extractor.selectTrack(audioTrackIndex)
                 val format = extractor.getTrackFormat(audioTrackIndex)
-                
+
                 // Create decoder
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: return false
                 val decoder = MediaCodec.createDecoderByType(mime)
                 decoder.configure(format, null, null, 0)
                 decoder.start()
-                
+
                 // Create output file and write WAV header
                 val outputFile = File(outputPath)
                 if (!outputFile.parentFile?.exists()!!) {
                     outputFile.parentFile?.mkdirs()
                 }
-                
+
                 val outputStream = FileOutputStream(outputFile)
-                
+
                 // Default values for WAV with Vosk
                 val sampleRate = 16000
                 val channels = 1
                 val bitsPerSample = 16
-                
+
                 // Write placeholder WAV header (will update after decoding)
                 writeWavHeader(outputStream, 0, sampleRate, channels, bitsPerSample)
-                
+
                 // Process and decode the audio
                 val bufferInfo = MediaCodec.BufferInfo()
                 val bufferSize = 8192 // Buffer size
@@ -64,10 +72,10 @@ class AudioConverter {
                 var totalBytesWritten = 0
                 var sawInputEOS = false
                 var sawOutputEOS = false
-                
+
                 // Resampling buffer if needed
                 val resampler = Resampler()
-                
+
                 while (!sawOutputEOS) {
                     // Feed input
                     if (!sawInputEOS) {
@@ -75,13 +83,13 @@ class AudioConverter {
                         if (inputBufferIndex >= 0) {
                             val inputBuffer = decoder.getInputBuffer(inputBufferIndex)
                             inputBuffer?.clear()
-                            
-                            val sampleSize = if (inputBuffer != null) 
+
+                            val sampleSize = if (inputBuffer != null)
                                 extractor.readSampleData(inputBuffer, 0) else -1
-                            
+
                             if (sampleSize < 0) {
                                 decoder.queueInputBuffer(
-                                    inputBufferIndex, 0, 0, 
+                                    inputBufferIndex, 0, 0,
                                     0, MediaCodec.BUFFER_FLAG_END_OF_STREAM
                                 )
                                 sawInputEOS = true
@@ -94,7 +102,7 @@ class AudioConverter {
                             }
                         }
                     }
-                    
+
                     // Get output
                     val outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 10000)
                     if (outputBufferIndex >= 0) {
@@ -102,17 +110,18 @@ class AudioConverter {
                         if (outputBuffer != null) {
                             val outBuffer = ByteArray(bufferInfo.size)
                             outputBuffer.get(outBuffer)
-                            
+
                             // Convert to 16kHz mono if needed
                             val sourceSampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                            val sourceChannelCount = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                            
+                            val sourceChannelCount =
+                                format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+
                             if (sourceSampleRate != sampleRate || sourceChannelCount != channels) {
                                 val convertedData = resampler.resample(
-                                    outBuffer, 
-                                    sourceSampleRate, 
+                                    outBuffer,
+                                    sourceSampleRate,
                                     sourceChannelCount,
-                                    sampleRate, 
+                                    sampleRate,
                                     channels
                                 )
                                 outputStream.write(convertedData)
@@ -122,24 +131,24 @@ class AudioConverter {
                                 totalBytesWritten += outBuffer.size
                             }
                         }
-                        
+
                         decoder.releaseOutputBuffer(outputBufferIndex, false)
-                        
+
                         if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                             sawOutputEOS = true
                         }
                     }
                 }
-                
+
                 // Update WAV header with final size
                 outputStream.close()
                 updateWavHeader(outputPath, totalBytesWritten)
-                
+
                 // Clean up
                 decoder.stop()
                 decoder.release()
                 extractor.release()
-                
+
                 return true
             } catch (e: Exception) {
                 Log.e(TAG, "Error converting audio: ${e.message}")
@@ -147,7 +156,7 @@ class AudioConverter {
                 return false
             }
         }
-        
+
         /**
          * Select the first audio track from the media file
          */
@@ -161,7 +170,7 @@ class AudioConverter {
             }
             return -1
         }
-        
+
         /**
          * Write WAV header to the output file
          */
@@ -174,13 +183,13 @@ class AudioConverter {
         ) {
             val byteRate = sampleRate * channels * (bitsPerSample / 8)
             val blockAlign = channels * (bitsPerSample / 8)
-            
+
             outputStream.apply {
                 // RIFF header
                 write("RIFF".toByteArray()) // ChunkID
                 writeInt(36 + dataSize)     // ChunkSize (placeholder)
                 write("WAVE".toByteArray()) // Format
-                
+
                 // fmt subchunk
                 write("fmt ".toByteArray()) // Subchunk1ID
                 writeInt(16)                // Subchunk1Size (16 for PCM)
@@ -190,31 +199,31 @@ class AudioConverter {
                 writeInt(byteRate)          // ByteRate
                 writeShort(blockAlign)      // BlockAlign
                 writeShort(bitsPerSample)   // BitsPerSample
-                
+
                 // data subchunk
                 write("data".toByteArray()) // Subchunk2ID
                 writeInt(dataSize)          // Subchunk2Size (placeholder)
             }
         }
-        
+
         /**
          * Update the WAV header with the actual data size
          */
         private fun updateWavHeader(wavFilePath: String, dataSize: Int) {
             val file = File(wavFilePath)
             val raf = file.randomAccessFile("rw")
-            
+
             // Update ChunkSize (4 bytes at position 4)
             raf.seek(4)
             raf.writeInt(36 + dataSize)
-            
+
             // Update Subchunk2Size (4 bytes at position 40)
             raf.seek(40)
             raf.writeInt(dataSize)
-            
+
             raf.close()
         }
-        
+
         /**
          * Utility extension to write an int to FileOutputStream
          */
@@ -224,7 +233,7 @@ class AudioConverter {
             write((value shr 16) and 0xFF)
             write((value shr 24) and 0xFF)
         }
-        
+
         /**
          * Utility extension to write a short to FileOutputStream
          */
@@ -232,12 +241,12 @@ class AudioConverter {
             write(value and 0xFF)
             write((value shr 8) and 0xFF)
         }
-        
+
         /**
          * Extension to open RandomAccessFile
          */
         private fun File.randomAccessFile(mode: String) = java.io.RandomAccessFile(this, mode)
-        
+
         /**
          * Get a temporary WAV file path in the app's cache directory
          */
@@ -247,8 +256,43 @@ class AudioConverter {
             val baseName = originalFile.nameWithoutExtension
             return File(cacheDir, "$baseName.wav").absolutePath
         }
+
+        /**
+         * Get a temporary WAV file path in the app's cache directory
+         */
+        fun getTempWavFilePath(context: Context, fileUri: Uri): String {
+            val cacheDir = context.cacheDir
+
+            // Extract filename from URI
+            val filename = getFileNameFromUri(context, fileUri) ?: "audio_file"
+            val baseName = filename.substringBeforeLast(".")
+
+            return File(cacheDir, "$baseName.wav").absolutePath
+        }
+
+        // Helper function to get filename from URI
+        private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+            var fileName: String? = null
+
+            // Try to get the display name from content resolver
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val displayNameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        fileName = cursor.getString(displayNameIndex)
+                    }
+                }
+            }
+
+            // If we couldn't get the filename from contentResolver, extract from URI path
+            if (fileName == null) {
+                fileName = uri.path?.lastIndexOf('/')?.let { uri.path?.substring(it + 1) }
+            }
+
+            return fileName
+        }
     }
-    
+
     /**
      * Simple audio resampler for converting between sample rates and channel counts
      */
@@ -266,7 +310,7 @@ class AudioConverter {
                 .asShortBuffer()
             val shorts = ShortArray(shortBuffer.remaining())
             shortBuffer.get(shorts)
-            
+
             // First handle channel conversion (e.g., stereo to mono)
             val monoShorts = if (sourceChannels > 1 && targetChannels == 1) {
                 ShortArray(shorts.size / sourceChannels) { i ->
@@ -279,32 +323,32 @@ class AudioConverter {
             } else {
                 shorts
             }
-            
+
             // Then handle sample rate conversion (simple linear interpolation)
             val ratio = sourceSampleRate.toDouble() / targetSampleRate
             val resampledLength = (monoShorts.size / ratio).toInt()
             val resampledShorts = ShortArray(resampledLength)
-            
+
             for (i in resampledShorts.indices) {
                 val position = i * ratio
                 val index = position.toInt()
                 val fraction = position - index
-                
+
                 if (index < monoShorts.size - 1) {
-                    val value = monoShorts[index] * (1 - fraction) + 
-                                monoShorts[index + 1] * fraction
+                    val value = monoShorts[index] * (1 - fraction) +
+                            monoShorts[index + 1] * fraction
                     resampledShorts[i] = value.toInt().toShort()
                 } else if (index < monoShorts.size) {
                     resampledShorts[i] = monoShorts[index]
                 }
             }
-            
+
             // Convert shorts back to bytes
             val outputBuffer = ByteBuffer.allocate(resampledShorts.size * 2)
                 .order(ByteOrder.LITTLE_ENDIAN)
             val shortOutBuffer = outputBuffer.asShortBuffer()
             shortOutBuffer.put(resampledShorts)
-            
+
             return outputBuffer.array()
         }
     }

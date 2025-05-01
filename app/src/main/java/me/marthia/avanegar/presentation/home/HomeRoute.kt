@@ -89,12 +89,6 @@ fun VoskApp(
         )
     }
 
-    LaunchedEffect(viewModel) {
-        viewModel.initModel(currentSelectedModel)
-    }
-
-    AudioAndFilePermission { }
-
     if (viewModel.downloadState)
         DownloadProgress()
 }

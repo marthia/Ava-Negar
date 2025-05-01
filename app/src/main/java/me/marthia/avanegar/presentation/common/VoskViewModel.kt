@@ -43,7 +43,6 @@ class VoskViewModel @Inject constructor(
 
     private val fileUtils = FileUtils(context)
 
-
     private var speechManager: SpeechRecognitionManager = SpeechRecognitionManager(context).apply {
         viewModelScope.launch {
             recognitionEventFlow.collect { event ->
@@ -83,6 +82,11 @@ class VoskViewModel @Inject constructor(
     }
 
 
+    init {
+        initModel(Pref.currentModel)
+    }
+
+
     private fun appendResult(text: String) {
         Log.i("RecognitionState", "appendResult--> $text")
         val rs = mapVoskResultToTranscription(text)
@@ -109,11 +113,17 @@ class VoskViewModel @Inject constructor(
 
     fun toggleFileRecognition(audio: String) {
         viewModelScope.launch {
-            val audioPath = fileUtils.getPath(audio.toUri()).toString()
-            val wavFilePath = AudioConverter.getTempWavFilePath(context, audioPath)
+
+            val audioUri = audio.toUri()
+            val wavFilePath = AudioConverter.getTempWavFilePath(context, audioUri)
 
             // Convert the audio
-            if (AudioConverter.convertToWav(audioPath, wavFilePath)) {
+            if (AudioConverter.convertToWav(
+                    context = context,
+                    inputPath = audioUri,
+                    outputPath = wavFilePath
+                )
+            ) {
                 speechManager.startFileRecognition(wavFilePath)
             }
         }
