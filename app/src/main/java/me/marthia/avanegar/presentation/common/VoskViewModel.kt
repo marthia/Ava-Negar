@@ -13,11 +13,14 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.marthia.avanegar.domain.RecognitionEvent
 import me.marthia.avanegar.domain.RecognitionState
 import me.marthia.avanegar.domain.mapVoskResultToTranscription
 import me.marthia.avanegar.presentation.common.DownloadModelWorker.Companion.DATA_INFO_KEY
+import me.marthia.avanegar.presentation.home.ImportProgressState
 import me.marthia.avanegar.presentation.utils.toJson
 import javax.inject.Inject
 
@@ -40,6 +43,10 @@ class VoskViewModel @Inject constructor(
 
     var downloadState by mutableStateOf(false)
         private set
+
+    var progress by mutableStateOf<ImportProgressState>(ImportProgressState.Idle)
+        private set
+
 
     private val fileUtils = FileUtils(context)
 
@@ -112,7 +119,7 @@ class VoskViewModel @Inject constructor(
     }
 
     fun toggleFileRecognition(audio: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
 
             val audioUri = audio.toUri()
             val wavFilePath = AudioConverter.getTempWavFilePath(context, audioUri)
@@ -124,9 +131,13 @@ class VoskViewModel @Inject constructor(
                     outputPath = wavFilePath
                 )
             ) {
+                withContext(Dispatchers.Main) {
+                    progress = ImportProgressState.Done
+                }
                 speechManager.startFileRecognition(wavFilePath)
             }
         }
+
     }
 
     fun setPause(isPaused: Boolean) {
@@ -140,7 +151,7 @@ class VoskViewModel @Inject constructor(
 
     fun initModel(model: LanguageModel) {
         // check if model is already downloaded
-        val isPresent = speechManager.isModelAvailable(model.name)
+        val isPresent = speechManager.isModelAvailable(model.title)
 
         // download model
         if (!isPresent)

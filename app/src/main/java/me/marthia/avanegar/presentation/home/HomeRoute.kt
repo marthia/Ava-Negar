@@ -33,10 +33,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -46,7 +46,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import kotlinx.coroutines.launch
 import me.marthia.avanegar.R
-import me.marthia.avanegar.presentation.common.AudioAndFilePermission
 import me.marthia.avanegar.presentation.common.LanguageModel
 import me.marthia.avanegar.presentation.common.ModelSelectionBS
 import me.marthia.avanegar.presentation.common.Pref
@@ -67,8 +66,7 @@ fun VoskApp(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             uri?.let {
-                viewModel.toggleFileRecognition(uri.toString())
-                navigator.openTranscriptionResult()
+                navigator.openImportScreen(uri.toString())
             }
         }
     )
@@ -111,6 +109,7 @@ fun VoskScreen(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
+                .clip(MaterialTheme.shapes.extraLarge.copy(CornerSize(48.dp)))
                 .clickable(onClick = onRecognizeFileClick),
             shape = MaterialTheme.shapes.extraLarge.copy(CornerSize(48.dp))
         ) {

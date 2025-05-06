@@ -1,6 +1,7 @@
 package me.marthia.avanegar.presentation.navigation
 
 import androidx.navigation.NavHostController
+import com.ramcosta.composedestinations.generated.destinations.ImportRouteDestination
 import com.ramcosta.composedestinations.generated.destinations.TranscriptionRouteDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 
@@ -24,5 +25,8 @@ class AppNavigationProvider(
         destinationsNavigator.navigate(TranscriptionRouteDestination())
     }
 
+    override fun openImportScreen(audioUri: String) {
+        destinationsNavigator.navigate(ImportRouteDestination(audioUri = audioUri))
+    }
 }
 

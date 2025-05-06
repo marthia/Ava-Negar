@@ -1,5 +1,7 @@
 package me.marthia.avanegar.presentation.transcription
 
+import android.content.ClipData
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -23,25 +25,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
+import kotlinx.coroutines.launch
 import me.marthia.avanegar.R
 import me.marthia.avanegar.presentation.common.VoskActivity
 import me.marthia.avanegar.presentation.common.VoskViewModel
 import me.marthia.avanegar.presentation.navigation.HomeGraph
 import me.marthia.avanegar.presentation.theme.AvaNegarTheme
+import me.marthia.avanegar.presentation.utils.ScreenTransitions
 
-@Destination<HomeGraph>()
+@Destination<HomeGraph>(style = ScreenTransitions::class)
 @Composable
 fun TranscriptionRoute(
     voskViewModel: VoskViewModel = hiltViewModel(LocalActivity.current as VoskActivity)
@@ -56,8 +61,9 @@ fun TranscriptionRoute(
 @Composable
 fun TranscriptionScreen(modifier: Modifier = Modifier, output: String) {
 
+    val scope = rememberCoroutineScope()
 
-    val localClipboardManager = LocalClipboardManager.current
+    val localClipboardManager = LocalClipboard.current
     var showMoreOptions by remember { mutableStateOf(false) }
 
 
@@ -79,7 +85,16 @@ fun TranscriptionScreen(modifier: Modifier = Modifier, output: String) {
 
 
             IconButton(onClick = {
-                localClipboardManager.setText(AnnotatedString(output))
+                scope.launch {
+                    localClipboardManager.setClipEntry(
+                        ClipEntry(
+                            ClipData.newPlainText(
+                                "AvaNegar Transcription",
+                                output
+                            )
+                        )
+                    )
+                }
             }) {
                 Icon(painter = painterResource(R.drawable.copy_icon), contentDescription = "Copy")
             }

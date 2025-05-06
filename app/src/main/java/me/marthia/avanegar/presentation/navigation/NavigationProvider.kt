@@ -12,4 +12,6 @@ interface NavigationProvider {
     fun navigateUp()
 
     fun openTranscriptionResult()
+
+    fun openImportScreen(audioUri: String)
 }
