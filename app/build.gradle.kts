@@ -80,6 +80,11 @@ dependencies {
     implementation(libs.androidx.work.runtime)
 
 
+    // Room
+    implementation(libs.room.paging)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
     implementation(libs.kotlinx.coroutines.android)
 
     //    Network

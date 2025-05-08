@@ -197,15 +197,15 @@ fun PreviousTranscriptions(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(16.dp))
 
 
-        repeat(3) {
-
-            TranscriptionItemList(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-            Spacer(Modifier.height(16.dp))
-        }
+//        repeat(3) {
+//
+//            TranscriptionItemList(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 16.dp)
+//            )
+//            Spacer(Modifier.height(16.dp))
+//        }
 
     }
 }
