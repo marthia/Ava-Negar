@@ -1,4 +1,4 @@
-package me.marthia.avanegar.domain
+package me.marthia.avanegar.data
 
 data class UiState(
     val recognitionState: RecognitionState = RecognitionState.Starting,

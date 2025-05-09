@@ -16,9 +16,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.marthia.avanegar.domain.RecognitionEvent
-import me.marthia.avanegar.domain.RecognitionState
-import me.marthia.avanegar.domain.mapVoskResultToTranscription
+import me.marthia.avanegar.data.RecognitionEvent
+import me.marthia.avanegar.data.RecognitionState
+import me.marthia.avanegar.data.TranscriptionHistoryRepository
+import me.marthia.avanegar.data.mapVoskResultToTranscription
 import me.marthia.avanegar.presentation.common.DownloadModelWorker.Companion.DATA_INFO_KEY
 import me.marthia.avanegar.presentation.home.ImportProgressState
 import me.marthia.avanegar.presentation.utils.toJson
@@ -26,7 +27,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VoskViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val repo: TranscriptionHistoryRepository
 ) : ViewModel() {
 
     private val workManager: WorkManager = WorkManager.getInstance(context)

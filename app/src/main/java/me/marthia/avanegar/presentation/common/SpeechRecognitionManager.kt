@@ -10,7 +10,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import me.marthia.avanegar.domain.RecognitionEvent
+import me.marthia.avanegar.data.RecognitionEvent
 import org.vosk.LibVosk
 import org.vosk.LogLevel
 import org.vosk.Model

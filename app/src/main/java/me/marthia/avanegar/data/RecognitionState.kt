@@ -1,4 +1,4 @@
-package me.marthia.avanegar.domain
+package me.marthia.avanegar.data
 
 enum class RecognitionState {
     Starting, Ready, Done, File, Microphone, Error
